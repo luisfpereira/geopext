@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use numpy::{PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
 
 use pyo3::{pymodule, types::PyModule, Bound, PyResult, Python};
 
@@ -11,14 +11,16 @@ use pyo3::{pymodule, types::PyModule, Bound, PyResult, Python};
 fn geopext(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[pyfn(m)]
     fn mesh_laplacian<'py>(
-        _py: Python<'py>,
+        py: Python<'py>,
         vertices: PyReadonlyArray2<'py, f64>,
         faces: PyReadonlyArray1<'py, usize>,
-    ) -> HashMap<(usize, usize), f64> {
+    ) -> (HashMap<(usize, usize), f64>, Bound<'py, PyArray1<f64>>) {
         let vertices = vertices.as_slice().unwrap();
         let faces = faces.as_slice().unwrap();
 
-        rust_fn::mesh_laplacian_wrapper(vertices, &faces)
+        let (laplace_matrix, areas) = rust_fn::mesh_laplacian_wrapper(vertices, &faces);
+
+        (laplace_matrix, areas.into_pyarray_bound(py))
     }
 
     Ok(())
@@ -33,9 +35,9 @@ mod rust_fn {
     pub fn mesh_laplacian_wrapper(
         vertices: &[f64],
         faces: &[usize],
-    ) -> HashMap<(usize, usize), f64> {
+    ) -> (HashMap<(usize, usize), f64>, Vec<f64>) {
         let mesh = corner_table_from_vertices_and_indices(&vertices, &faces);
 
-        mesh.laplacian()
+        (mesh.laplace_matrix(), mesh.mass_matrix())
     }
 }
