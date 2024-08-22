@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = "0.21.0"
 numpy = "0.21.0"
-geop = { path = "/home/luisfpereira/Repos/github/geop", version = "0.1.0" }
+geop = { git = "https://github.com/luisfpereira/geop", rev = "75bc30f778476307ebbd2bdfa875635e9f09b9dd" }
 
 [toolchain]
 channel = "nightly"
