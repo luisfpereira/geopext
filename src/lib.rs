@@ -14,11 +14,18 @@ fn geopext(m: &Bound<'_, PyModule>) -> PyResult<()> {
         py: Python<'py>,
         vertices: PyReadonlyArray2<'py, f64>,
         faces: PyReadonlyArray1<'py, usize>,
+        ds: &str,
     ) -> (HashMap<(usize, usize), f64>, Bound<'py, PyArray1<f64>>) {
         let vertices = vertices.as_slice().unwrap();
         let faces = faces.as_slice().unwrap();
 
-        let (laplace_matrix, areas) = rust_fn::mesh_laplacian_wrapper(vertices, &faces);
+        let ds = match ds {
+            "corner_table" => rust_fn::DS::CornerTable,
+            "half_edge" => rust_fn::DS::HalfEdge,
+            _ => panic!("Unkown data structure."),
+        };
+
+        let (laplace_matrix, areas) = rust_fn::mesh_laplacian(vertices, faces, ds);
 
         (laplace_matrix, areas.into_pyarray_bound(py))
     }
@@ -27,16 +34,42 @@ fn geopext(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 mod rust_fn {
-    use geop::corner_table_from_vertices_and_indices;
-    use geop::operator::Laplacian;
-
+    use baby_shark::mesh::corner_table::table::CornerTable;
+    use geop::ds::FromSharedVertex;
+    use geop::ds::HalfEdgeMesh;
+    use geop::op::Laplacian;
     use std::collections::HashMap;
 
-    pub fn mesh_laplacian_wrapper(
+    pub enum DS {
+        CornerTable,
+        HalfEdge,
+    }
+
+    pub fn mesh_laplacian(
+        vertices: &[f64],
+        faces: &[usize],
+        ds: DS,
+    ) -> (HashMap<(usize, usize), f64>, Vec<f64>) {
+        return match ds {
+            DS::CornerTable => mesh_laplacian_corner_table(&vertices, &faces),
+            DS::HalfEdge => mesh_laplacian_half_edge(&vertices, &faces),
+        };
+    }
+
+    pub fn mesh_laplacian_corner_table(
         vertices: &[f64],
         faces: &[usize],
     ) -> (HashMap<(usize, usize), f64>, Vec<f64>) {
-        let mesh = corner_table_from_vertices_and_indices(&vertices, &faces);
+        let mesh = CornerTable::from_vertices_and_faces(&vertices, &faces);
+
+        (mesh.laplace_matrix(), mesh.mass_matrix())
+    }
+
+    pub fn mesh_laplacian_half_edge(
+        vertices: &[f64],
+        faces: &[usize],
+    ) -> (HashMap<(usize, usize), f64>, Vec<f64>) {
+        let mesh = HalfEdgeMesh::from_vertices_and_faces(&vertices, &faces);
 
         (mesh.laplace_matrix(), mesh.mass_matrix())
     }

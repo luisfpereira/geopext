@@ -11,7 +11,8 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = "0.21.0"
 numpy = "0.21.0"
-geop = { git = "https://github.com/luisfpereira/geop", rev = "75bc30f778476307ebbd2bdfa875635e9f09b9dd" }
+geop = { git = "https://github.com/luisfpereira/geop", rev = "07c3334fb3b2c06cd7fcbca09b1927cfcc26fa60" }
+baby_shark = { git = "https://github.com/dima634/baby_shark.git" }
 
 [toolchain]
 channel = "nightly"
